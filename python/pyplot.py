@@ -62,7 +62,7 @@ class PyLidar3:
 
         def StartScanning(self):
             while self.running:
-                yield self.lidar_values
+                yield self.lidar_values.copy()
 
         def StopScanning(self):
             self.running = False
@@ -71,7 +71,39 @@ class PyLidar3:
             pass
 
 
-def filter_values(values):
+def filter_values(values, distance):
+    for winkel, wert in values.items():
+        if winkel is None or wert is None:
+            continue
+        ang_last = (winkel - 1) % 360
+        ang_next = (winkel + 1) % 360
+
+        current = values.get(winkel)
+        dist_last = values.get(ang_last)
+        dist_next = values.get(ang_next)
+
+        # wenn irgenein wert None
+        if any([not current, not dist_last, not dist_next]):
+            continue
+
+        # x und y aktueller wert
+        xc = math.cos(math.radians(winkel)) * wert
+        yc = math.sin(math.radians(winkel)) * wert
+
+        # x und y letzter wert
+        xl = math.cos(math.radians(ang_last)) * dist_last
+        yl = math.sin(math.radians(ang_last)) * dist_last
+
+        # x und y nächster wert
+        xn = math.cos(math.radians(ang_next)) * dist_next
+        yn = math.sin(math.radians(ang_next)) * dist_next
+
+        dl = math.sqrt((xc - xl) ** 2 + (yc - yl) ** 2)
+        dn = math.sqrt((xc - xn) ** 2 + (yc - yn) ** 2)
+
+        if dl > distance and dn > distance:
+            values[winkel] = None
+
     return values
 
 
@@ -102,17 +134,29 @@ def main():
             print("verbunden")
             gen = lidar.StartScanning()
             t = time.time()
+            filter_dist = 100
             while (time.time() - t) < 30:
-                for event in pygame.event.get():
-                    if (event.type == pygame.KEYDOWN and event.key == pygame.K_q) or (event.type == pygame.QUIT):
-                        raise KeyboardInterrupt
                 rendering = {}
                 data = next(gen)
-                print("got new data")
-                filtered = filter_values(data)
+                filtered = filter_values(data, filter_dist)
 
                 draw_values(screen, filtered)
-                time.sleep(1)
+
+                # selbes wie time.sleep(1) nur mit pygame event handler
+                tw = time.time() + 1
+                while (time.time() - tw) < 0:
+                    for event in pygame.event.get():
+                        if event.type == pygame.KEYDOWN:
+                            if event.key == pygame.K_ESCAPE:
+                                raise KeyboardInterrupt
+                            elif event.key == pygame.K_UP:
+                                filter_dist += 10
+                                print("Filter Value:", filter_dist)
+                            elif event.key == pygame.K_DOWN:
+                                filter_dist -= 10
+                                print("Filter Value:", filter_dist)
+                        if event.type == pygame.QUIT:
+                            raise KeyboardInterrupt
 
     except KeyboardInterrupt:
         lidar.StartScanning()
