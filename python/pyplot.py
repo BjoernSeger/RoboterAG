@@ -72,50 +72,40 @@ class PyLidar3:
 
 
 def filter_values(values, distance):
+    coords = {}
     for winkel, wert in values.items():
-        if winkel is None or wert is None:
+        x = math.cos(math.radians(winkel)) * wert
+        y = math.sin(math.radians(winkel)) * wert
+        coords[winkel] = (x, y)
+
+    winkel = -1
+    while winkel < 360:
+        winkel += 1
+        pos = coords.get(winkel, None)
+        if winkel is None or pos is None:
             continue
-        ang_last = (winkel - 1) % 360
-        ang_next = (winkel + 1) % 360
+        delete = True
+        for w in range(360):
+            opos = coords.get(w, None)
+            if w == winkel or opos is None:
+                continue
+            dist = math.sqrt((pos[0] - opos[0]) ** 2 + (pos[1] - opos[1]) ** 2)
+            if dist < distance:
+                delete = False
+                break
 
-        current = values.get(winkel)
-        dist_last = values.get(ang_last)
-        dist_next = values.get(ang_next)
+        if delete:
+            coords.pop(winkel)
 
-        # wenn irgenein wert None
-        if any([not current, not dist_last, not dist_next]):
-            continue
-
-        # x und y aktueller wert
-        xc = math.cos(math.radians(winkel)) * wert
-        yc = math.sin(math.radians(winkel)) * wert
-
-        # x und y letzter wert
-        xl = math.cos(math.radians(ang_last)) * dist_last
-        yl = math.sin(math.radians(ang_last)) * dist_last
-
-        # x und y nächster wert
-        xn = math.cos(math.radians(ang_next)) * dist_next
-        yn = math.sin(math.radians(ang_next)) * dist_next
-
-        dl = math.sqrt((xc - xl) ** 2 + (yc - yl) ** 2)
-        dn = math.sqrt((xc - xn) ** 2 + (yc - yn) ** 2)
-
-        if dl > distance and dn > distance:
-            values[winkel] = None
-
-    return values
+    return coords
 
 
-def draw_values(screen, values):
+def draw_values(screen, coords):
     points = []
     sx, sy = screen.get_size()
-    for angle, distance in values.items():
-        winkel = math.radians(angle)
-        if values[angle] is not None:
-            x = math.cos(winkel) * distance
-            y = math.sin(winkel) * distance
-            points.append((x / 10 + sx / 2, y / 10 + sy / 2))
+    for angle, pos in coords.items():
+        x, y = pos
+        points.append((x / 10 + sx / 2, y / 10 + sy / 2))
     screen.fill((0, 0, 0))
     for point in points:
         pygame.draw.circle(screen, (170, 170, 170), point, 5)
@@ -138,9 +128,9 @@ def main():
             while (time.time() - t) < 30:
                 rendering = {}
                 data = next(gen)
-                filtered = filter_values(data, filter_dist)
+                coords = filter_values(data, filter_dist)
 
-                draw_values(screen, filtered)
+                draw_values(screen, coords)
 
                 # selbes wie time.sleep(1) nur mit pygame event handler
                 tw = time.time() + 1
