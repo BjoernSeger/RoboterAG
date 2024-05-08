@@ -71,7 +71,7 @@ class PyLidar3:
             pass
 
 
-def filter_values(values, distance):
+def filter_values(values, f_distance, f_amount):
     coords = {}
     for winkel, wert in values.items():
         x = math.cos(math.radians(winkel)) * wert
@@ -85,14 +85,18 @@ def filter_values(values, distance):
         if winkel is None or pos is None:
             continue
         delete = True
+        amount = 0
         for w in range(360):
             opos = coords.get(w, None)
             if w == winkel or opos is None:
                 continue
             dist = math.sqrt((pos[0] - opos[0]) ** 2 + (pos[1] - opos[1]) ** 2)
-            if dist < distance:
-                delete = False
-                break
+            if dist < f_distance:
+                if amount < f_amount:
+                    amount += 1
+                else:
+                    delete = False
+                    break
 
         if delete:
             coords.pop(winkel)
@@ -125,10 +129,11 @@ def main():
             gen = lidar.StartScanning()
             t = time.time()
             filter_dist = 100
+            filter_amount = 1
             while (time.time() - t) < 30:
                 rendering = {}
                 data = next(gen)
-                coords = filter_values(data, filter_dist)
+                coords = filter_values(data, filter_dist, filter_amount)
 
                 draw_values(screen, coords)
 
@@ -141,11 +146,17 @@ def main():
                                 raise KeyboardInterrupt
                             elif event.key == pygame.K_UP:
                                 filter_dist += 10
-                                print("Filter Value:", filter_dist)
+                                print("Filter Distanz:", filter_dist)
                             elif event.key == pygame.K_DOWN:
                                 filter_dist -= 10
-                                print("Filter Value:", filter_dist)
-                        if event.type == pygame.QUIT:
+                                print("Filter Distanz:", filter_dist)
+                            elif event.key == pygame.K_LEFT:
+                                filter_amount -= 1
+                                print("Filter Anzahl:", filter_amount)
+                            elif event.key == pygame.K_RIGHT:
+                                filter_amount += 1
+                                print("Filter Anzahl:", filter_amount)
+                        elif event.type == pygame.QUIT:
                             raise KeyboardInterrupt
 
     except KeyboardInterrupt:
