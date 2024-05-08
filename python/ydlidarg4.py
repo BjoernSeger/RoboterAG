@@ -29,17 +29,17 @@ def LidarFilter(data, distance):
             # Abst1= math.sqrt((Xang-Xang1)**2 + (Yang-Yang1)**2)
             # Abst2= math.sqrt((Xang-Xang2)**2 + (Yang-Yang2)**2)
             if S1 is not None:
-                Xang = math.cos(winkel)*werte
-                Yang = math.sin(winkel)*werte
-                Xang1 = math.cos(ang1)*data[ang1]
-                Yang1 = math.sin(ang1)*data[ang1]
+                Xang = math.cos(math.radians(winkel))*werte
+                Yang = math.sin(math.radians(winkel))*werte
+                Xang1 = math.cos(math.radians(ang1))*data[ang1]
+                Yang1 = math.sin(math.radians(ang1))*data[ang1]
                 resP1 = int(math.sqrt((Xang-Xang1)**2+(Yang-Yang1)**2)) #resP1 = int(math.sqrt((SA**2)+(S1**2)+2*SA*S1*0.99985))
 
             if S2 is not None:
-                Xang = math.cos(winkel)*werte
-                Yang = math.sin(winkel)*werte
-                Xang2 = math.cos(ang2)*data[ang2]
-                Yang2 = math.sin(ang2)*data[ang2]
+                Xang = math.cos(math.radians(winkel))*werte
+                Yang = math.sin(math.radians(winkel))*werte
+                Xang2 = math.cos(math.radians(ang2))*data[ang2]
+                Yang2 = math.sin(math.radians(ang2))*data[ang2]
                 resP2 = int(math.sqrt((Xang-Xang2)**2+(Yang-Yang2)**2))  #resP2 = int(math.sqrt((SA**2)+(S2**2)+2*SA*S2*0.99985))
 
             print("resP1", resP1)
@@ -68,7 +68,7 @@ try:
         while (time.time() - t) < 30: # für 30 Sekunden scannen
             data = next(gen) # Ausgabe der gescannten Werte
             print(data)
-            data = LidarFilter(data, 1500)
+            data = LidarFilter(data, 100)
             pyplot.main(data)
             for winkel, wert in data.items():
 
@@ -103,8 +103,7 @@ try:
                         print("FALSE Korrelationskoeffizient kleiner als 0.8", np.corrcoef(winkelInRangeX, winkelInRangeY)[0, 1])
 
             
-                
-            print(winkel_dict)   
+           
 
         lidar.StopScanning()
         lidar.Disconnect()
